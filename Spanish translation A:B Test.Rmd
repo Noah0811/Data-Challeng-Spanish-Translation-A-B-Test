@@ -5,26 +5,77 @@ date: "1/25/2020"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+Goals:
+
+Confirm that the test is actually negative. That is, it appears that the old version of the site with just one translation across Spain and LatAm performs better
+
+Explain why that might be happening. Are the localized translations really worse?
+
+```{r}
+library(tidyverse)
+library(rpart)
+library(rpart.plot)
+library(psych)
 ```
 
-## R Markdown
+```{r}
+#read data
+user<-read.csv("user_table.csv",stringsAsFactors = FALSE, header= TRUE)
+test<-read.csv("test_table.csv",stringsAsFactors = FALSE, header= TRUE)
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+#check duplication
+identical(unique(user$user_id),user$user_id)# TRUE meaning no duplicated data
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
+identical(unique(test$user_id),test$user_id)# TRUE meaning no duplicated data
 ```
 
-## Including Plots
+```{r}
+# Is everyone in one table also in the other one?
+dim(user)[1]-dim(test)[1] # the answer is no
+```
+Looks like the user table is busted and we have some users ids missing. Therefore when merging the two tables, i have to be careful to do not lose the user ids in the test table, but not in the user table.
 
-You can also embed plots, for example:
+```{r}
+data<-left_join(test,user,by="user_id") # no data is losing in this way
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+str(data)
+
+data$date<-as.Date(data$date)
+
+summary(data)
+describe(data)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+First question is: check test results. But even before that, let's make sure it is true Spain converts much better than the rest of the LatAm
+
+```{r}
+#before the test
+data_convertion_country<-data%>%
+  group_by(country)%>%
+  summarise(conversion_rate=mean(conversion[test==0]))%>%
+  arrange(desc(conversion_rate))
+
+head(data_convertion_country)
+
+#indeed, Spain has the top conversion rate, better than the rest of the LatAm
+```
+```{r}
+# a simple t-test here should work. We have collected ~0.5MM data and test/control split is ~50/50.
+
+data_test<-subset(data,country!="Spain") # nothing changed in Spain, so no point in keeping those users
+
+t.test(data_test$conversion[data_test$test==1],data_test$conversion[data_test$test==0]) # in non-spain contries there's statistical significance in their mean differences between test group and control group; control group has better performance than the tested group
+```
+
+Not in the test are converting at 4.8% while users in the test just at 4.3%. That's a 10% drop, which would be dramatic if it were true. The most likely reason for weird A/B test results are:
+1. We didn't collect enough data.
+2. Some bias has been introduced in the experiment so that test/ control people are not really random
+
+
+In data science, whenever resuls appear too bad or too good  to be true, they are not true.
+
+Firstly, let's plot day by day, to see if these weird results have been constantly happening or they just started happening all of a sudden
+```{r}
+
+```
+
