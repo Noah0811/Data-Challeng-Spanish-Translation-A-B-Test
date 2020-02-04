@@ -62,9 +62,9 @@ head(data_convertion_country)
 ```{r}
 # a simple t-test here should work. We have collected ~0.5MM data and test/control split is ~50/50.
 
-data_test<-subset(data,country!="Spain") # nothing changed in Spain, so no point in keeping those users
+data_test<-subset(data,country!="Spain") # nothing new has been added to the service in Spain, so no point in keeping those users
 
-t.test(data_test$conversion[data_test$test==1],data_test$conversion[data_test$test==0]) # in non-spain contries there's statistical significance in their mean differences between test group and control group; control group has better performance than the tested group
+t.test(data_test$conversion[data_test$test==1],data_test$conversion[data_test$test==0]) # in non-spain contries there's statistical significance in their mean differences between test group and control group; control group has better performance than the tested group,meaning that the change has a negative impact on the conversion-
 ```
 
 Not in the test are converting at 4.8% while users in the test just at 4.3%. That's a 10% drop, which would be dramatic if it were true. The most likely reason for weird A/B test results are:
@@ -72,10 +72,25 @@ Not in the test are converting at 4.8% while users in the test just at 4.3%. Tha
 2. Some bias has been introduced in the experiment so that test/ control people are not really random
 
 
-In data science, whenever resuls appear too bad or too good  to be true, they are not true.
+In data science, whenever results appear too bad or too good  to be true, they are not true.
 
 Firstly, let's plot day by day, to see if these weird results have been constantly happening or they just started happening all of a sudden
 ```{r}
+data_test_by_day<-data_test%>%
+  group_by(date)%>%
+  summarise(test_vs_control=mean(conversion[test==1])/
+                            mean(conversion[test==0]))
 
+qplot(x=date,y=test_vs_control,data=data_test_by_day,geom="line")
+
+ggplot(data_test_by_day,aes(x=date,test_vs_control))+
+  geom_line()
 ```
+
+
+From the plot we could tell that 
+1. All of the test_vs_control are smaller than 1, meaning that Test has been constantly worse than control. There's relatively little variance across the days. That probably means that we do have enough data, but there was some bias in the experiment set up.
+
+2. But there is this rising trend that could possibly exceed 1. And on a side note, the testing just ran for 5 days. Normally, it should always run at least 1 full week to capture weekly pattern, 2 weeks would be predicably better.
+
 
