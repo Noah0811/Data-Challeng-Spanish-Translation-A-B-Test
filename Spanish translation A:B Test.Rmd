@@ -94,3 +94,39 @@ From the plot we could tell that
 2. But there is this rising trend that could possibly exceed 1. And on a side note, the testing just ran for 5 days. Normally, it should always run at least 1 full week to capture weekly pattern, 2 weeks would be predicably better.
 
 
+Likely, there is for some reason some segment of users more likely to end up in test or in control, this segment had a significantly above/ below conversion rate and this affected the overall results.
+
+In an ideal world, the distribution of people in test and control for each segment should be the same.  
+There are many ways to check this. 
+
+One way is to build a decision tree where the variables are the user dimensions and the outcome variable is whether the user is in test or control. If the tree splits, it means that for given values of that variable you are more likely to end up in test or control. But this should be impossible! Therefore, if the randomization worked, the tree should not split at all(or at least not be able to separate the two classes well)
+
+```{r}
+tree<-rpart(test~.,data_test[,-8],control=rpart.control(minbucket = nrow(data_test)/100,maxdepth = 2))
+# we remove conversion. Doesn't matter now.
+# we only look for segments representing at least 1% of the populations.
+
+tree # here we are not interested in predictive power, we are mainly using the tree as a descriptive stat tool
+summary(tree)
+```
+
+Looks very interesting. The randomizaton is perfect for the countries on one side of the split(country=Bolivia,Chile,Colombia,Costa Rica,Ecuador,El Salvador,Guatemala,Honduras,Mexico,Nicaragua,Panama,Paraguay,Peru,Venezuela)
+Indeed, in that leaf the test/control ratio is 0.498!
+
+However, Argentina and Uruguary together have 80% test and 20% control! So let's check the test results after controlling for country.
+That is, we check for each country how the test is doing:
+
+```{r}
+data_test_country<-data_test%>%
+  group_by(country)%>%
+  summarize(p_value=t.test(conversion[test==1],conversion[test==0])$p.value,
+            conversion_test=t.test(conversion[test==1],conversion[test==0])$estimate[1],
+            conversion_control=t.test(conversion[test==1],conversion[test==0])$estimate[2]
+            )%>%
+  arrange(p_value)
+
+data_test_country
+```
+
+
+After we control for country, the test clearly appears non-significant. Nota great successgiven that the goal was to inprove conversion rate, but at least we know that a localized translation didn't make things worse!
