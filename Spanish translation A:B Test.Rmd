@@ -14,7 +14,7 @@ Explain why that might be happening. Are the localized translations really worse
 ```{r}
 library(tidyverse)
 library(rpart)
-library(rpart.plot)
+library(rpart.plot)   
 library(psych)
 ```
 
