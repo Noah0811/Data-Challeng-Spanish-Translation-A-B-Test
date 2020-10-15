@@ -30,13 +30,13 @@ identical(unique(test$user_id),test$user_id)# TRUE meaning no duplicated data
 ```
 
 ```{r}
-# Is everyone in one table also in the other one?
+# Is everyone in the user table also in the test one?
 dim(user)[1]-dim(test)[1] # the answer is no
 ```
 Looks like the user table is busted and we have some users ids missing. Therefore when merging the two tables, i have to be careful to do not lose the user ids in the test table, but not in the user table.
 
 ```{r}
-data<-left_join(test,user,by="user_id") # no data is losing in this way
+data<-left_join(test,user,by="user_id") # no data is losing in this way, for those in user but not in test,their records in test's column will be NA
 
 str(data)
 
